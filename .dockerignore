@@ -1,0 +1,12 @@
+node_modules
+bin/yt-dlp
+npm-debug.log
+*.log
+.git
+.gitignore
+config.json
+data
+README.md
+.gitlab-ci.yml
+docker-compose.yml
+start.sh

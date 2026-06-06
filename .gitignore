@@ -1,0 +1,12 @@
+# Secrets & runtime state — NEVER commit these
+config.json
+data/
+.env
+
+# Dependencies & binaries (installed/downloaded during build)
+node_modules/
+bin/yt-dlp
+
+# Logs
+*.log
+bot.log

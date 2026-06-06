@@ -1,0 +1,19 @@
+{
+  "token": "DEIN_BOT_TOKEN_HIER",
+  "clientId": "DEINE_APPLICATION_ID_HIER",
+  "guildId": "",
+
+  "autoJoin": {
+    "enabled": false,
+    "guildId": "DEINE_SERVER_ID",
+    "channelId": "DEINE_VOICE_CHANNEL_ID",
+    "source": {
+      "query": "http://stream.example.com/stream.mp3",
+      "loop": true,
+      "shuffle": false
+    }
+  },
+
+  "defaultVolume": 100,
+  "allowedRoles": []
+}

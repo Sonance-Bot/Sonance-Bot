@@ -1,0 +1,22 @@
+services:
+  musicbot:
+    # The server's cron runs `docker compose pull && docker compose up -d`, so it
+    # needs the CI-built registry image here. Set your namespace (or override via
+    # the MUSICBOT_IMAGE env var). `build: .` stays for local builds.
+    image: ${MUSICBOT_IMAGE:-registry.gitlab.com/DEIN_NAMESPACE/musicbot:latest}
+    build: .
+    restart: unless-stopped
+    environment:
+      # Secrets — set these in a .env file next to this compose file (gitignored).
+      DISCORD_TOKEN: ${DISCORD_TOKEN:?set DISCORD_TOKEN}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:?set DISCORD_CLIENT_ID}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      ALLOWED_ROLES: ${ALLOWED_ROLES:-}
+      DEFAULT_VOLUME: ${DEFAULT_VOLUME:-100}
+    volumes:
+      # Persists /autojoin config across restarts.
+      - musicbot-data:/data
+    # The bot has no inbound ports; it only connects out to Discord.
+
+volumes:
+  musicbot-data:
