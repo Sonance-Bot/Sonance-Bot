@@ -295,6 +295,17 @@ process.on('SIGINT', () => { for (const p of players.values()) p.destroy(); proc
 process.on('SIGTERM', () => { for (const p of players.values()) p.destroy(); process.exit(0); });
 
 (async () => {
-  await registerCommands();
+  try {
+    await registerCommands();
+  } catch (err) {
+    if (err?.code === 50001) {
+      const invite = `https://discord.com/api/oauth2/authorize?client_id=${config.clientId}&permissions=3146752&scope=bot%20applications.commands`;
+      console.error(`Command-Registrierung fehlgeschlagen (Missing Access): Der Bot ist nicht auf Guild ${config.guildId} oder wurde ohne 'applications.commands'-Scope eingeladen.`);
+      console.error(`Bot einladen: ${invite}`);
+    } else {
+      console.error('Command-Registrierung fehlgeschlagen:', err.message);
+    }
+    // Trotzdem einloggen — nach dem Einladen reicht ein Neustart zum Nachregistrieren.
+  }
   await client.login(config.token);
 })();
