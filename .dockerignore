@@ -4,9 +4,9 @@ npm-debug.log
 *.log
 .git
 .gitignore
+.github
 config.json
 data
 README.md
-.gitlab-ci.yml
 docker-compose.yml
 start.sh

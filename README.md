@@ -95,26 +95,29 @@ docker run -d --name musicbot --restart unless-stopped \
 
 `restart: unless-stopped` sorgt für echtes 24/7 (übersteht Crashes & Reboots).
 
-## CI/CD (GitLab)
+## CI/CD (GitHub Actions)
 
-`.gitlab-ci.yml` definiert zwei Stages:
+`.github/workflows/ci.yml` definiert zwei Jobs:
 
-1. **lint** – Syntax-Check + Modul-Load
-2. **build** – baut das Image mit Kaniko und pusht es in die **GitLab Container
-   Registry** (`$CI_REGISTRY_IMAGE:latest` + Commit-SHA)
+1. **lint** (push + PR) – Syntax-Check + Modul-Load
+2. **build** (nur push auf `main`) – baut das Image und pusht es in die **GitHub
+   Container Registry** `ghcr.io/<owner>/<repo>` (`:latest` + `:sha-<kurz>`)
 
-Keine CI/CD-Variablen nötig — der Build nutzt die eingebauten `CI_REGISTRY_*`.
+Keine Secrets nötig — der Build nutzt den eingebauten `GITHUB_TOKEN` (Job-
+Permission `packages: write`). Das GHCR-Package ist anfangs privat; in den
+Package-Settings auf **public** stellen, wenn jeder es ziehen können soll.
 
 **Deployment** passiert auf dem Zielserver selbst: dort läuft ein Cron, der das
 frisch gepushte Image ausrollt:
 
 ```bash
-cd /opt/musicbot && docker compose pull && docker compose up -d
+cd /opt/sonance && docker compose pull && docker compose up -d
 ```
 
-Dazu liegt auf dem Server eine `docker-compose.yml` (mit gesetztem
-`MUSICBOT_IMAGE` bzw. Registry-Pfad) und eine `.env` mit den Secrets. Beim ersten
-Mal einmalig `docker login` gegen die Registry.
+Dazu liegt auf dem Server eine `docker-compose.yml` (Image-Default zeigt auf GHCR,
+sonst via `MUSICBOT_IMAGE` überschreiben) und eine `.env` mit den Secrets. Bei
+**privatem** Package vorher einmalig `docker login ghcr.io` (mit einem PAT,
+Scope `read:packages`); bei public entfällt das.
 
 ## Technische Hinweise
 
