@@ -127,3 +127,9 @@ Scope `read:packages`); bei public entfällt das.
   Umgebung); Netzwerk-Bytes holt `curl`/`yt-dlp` und pipt sie in ffmpegs stdin.
 - Opus-Encoding über das reine JS-Paket `opusscript` (kein Compiler nötig). Auf
   einem Server ist `@discordjs/opus` schneller (benötigt Build-Tools).
+
+## Lizenz
+
+[PolyForm Noncommercial License 1.0.0](LICENSE) — © 2026 Robin Wolff.
+Nutzung, Änderung und Weitergabe sind für **nicht-kommerzielle** Zwecke erlaubt;
+kommerzielle Nutzung ist nicht gestattet. Details siehe [`LICENSE`](LICENSE).
