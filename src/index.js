@@ -105,6 +105,7 @@ async function doAutoJoin() {
       return;
     }
     const player = getPlayer(guild);
+    player.lockChannel(channel.id); // pin: auto-join keeps the bot in this channel
     await player.ensureConnected(channel);
 
     const src = aj.source || {};
@@ -130,6 +131,18 @@ client.once('clientReady', async () => {
   await doAutoJoin();
 });
 
+// Channel-Lock: solange Auto-Join aktiv ist, den Bot sofort zurückziehen, wenn er
+// verschoben oder rausgezogen wird.
+client.on('voiceStateUpdate', (oldState, newState) => {
+  if (newState.id !== client.user?.id) return; // nur der Bot selbst
+  const player = players.get(newState.guild.id);
+  if (!player?.lockedChannelId) return;
+  if (newState.channelId !== player.lockedChannelId) {
+    console.warn(`[lock:${newState.guild.id}] Bot in falschem Channel (${newState.channelId ?? 'raus'}) — zurück zu ${player.lockedChannelId}`);
+    player.returnToLock();
+  }
+});
+
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   const { commandName: cmd } = interaction;
@@ -152,6 +165,13 @@ client.on('interactionCreate', async (interaction) => {
   try {
     switch (cmd) {
       case 'join': {
+        if (player.lockedChannelId) {
+          const locked = await guild.channels.fetch(player.lockedChannelId).catch(() => null);
+          if (locked) {
+            await player.ensureConnected(locked);
+            return interaction.reply(`Auto-Join aktiv — Bot bleibt in **${locked.name}**.`);
+          }
+        }
         if (!memberChannel) return interaction.reply({ content: 'Du bist in keinem Voice-Channel.', ephemeral: true });
         await player.ensureConnected(memberChannel);
         return interaction.reply(`Beigetreten: **${memberChannel.name}**`);
@@ -160,7 +180,10 @@ client.on('interactionCreate', async (interaction) => {
       case 'play': {
         const query = interaction.options.getString('query', true);
         const replace = interaction.options.getBoolean('replace') ?? false;
-        const channel = memberChannel || guild.channels.cache.get(player.channelId);
+        // When auto-join pins the bot, always use the locked channel.
+        const channel = player.lockedChannelId
+          ? await guild.channels.fetch(player.lockedChannelId).catch(() => null)
+          : (memberChannel || guild.channels.cache.get(player.channelId));
         if (!channel) return interaction.reply({ content: 'Tritt erst einem Voice-Channel bei.', ephemeral: true });
 
         await interaction.deferReply();
@@ -195,6 +218,9 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply(player.resume() ? 'Fortgesetzt.' : 'Konnte nicht fortsetzen.');
 
       case 'leave':
+        if (player.lockedChannelId) {
+          return interaction.reply({ content: 'Auto-Join ist aktiv — erst `/autojoin disable`, dann `/leave`.', ephemeral: true });
+        }
         player.destroy();
         players.delete(guild.id);
         return interaction.reply('Channel verlassen.');
@@ -247,7 +273,8 @@ client.on('interactionCreate', async (interaction) => {
         if (sub === 'disable') {
           config.autoJoin = { ...(config.autoJoin || {}), enabled: false };
           saveConfig();
-          return interaction.reply('Auto-Join **deaktiviert**. (Beim nächsten Start joint der Bot nicht mehr automatisch; laufende Wiedergabe bleibt.)');
+          player.unlock(); // Bot ist nicht mehr an den Channel gefesselt
+          return interaction.reply('Auto-Join **deaktiviert**. Der Bot ist nicht mehr an den Channel gefesselt; laufende Wiedergabe bleibt.');
         }
 
         // sub === 'set'
@@ -265,7 +292,8 @@ client.on('interactionCreate', async (interaction) => {
         };
         saveConfig();
 
-        // Sofort anwenden: beitreten + abspielen.
+        // Sofort anwenden: an Channel fesseln, beitreten + abspielen.
+        player.lockChannel(channel.id);
         await player.ensureConnected(channel);
         const tracks = await resolveQuery(source);
         if (tracks.length === 0) {
@@ -276,7 +304,7 @@ client.on('interactionCreate', async (interaction) => {
         player.enqueue(tracks, { replace: true });
         await player.start();
         return interaction.editReply(
-          `Auto-Join gespeichert & gestartet in **${channel.name}**\n• Quelle: \`${source}\` (${tracks.length} Track(s))\n• Loop: ${loop ? 'an' : 'aus'} · Shuffle: ${shuffle ? 'an' : 'aus'}\nGilt ab jetzt **auch bei jedem Bot-Start**.`,
+          `Auto-Join gespeichert & gestartet in **${channel.name}**\n• Quelle: \`${source}\` (${tracks.length} Track(s))\n• Loop: ${loop ? 'an' : 'aus'} · Shuffle: ${shuffle ? 'an' : 'aus'}\nDer Bot ist jetzt an diesen Channel **gefesselt** (kehrt bei Verschieben/Rauswurf zurück) und joint **bei jedem Start**.`,
         );
       }
 

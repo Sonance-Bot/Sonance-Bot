@@ -36,12 +36,17 @@ class GuildPlayer {
     this.volume = 1.0;
     this.connection = null;
     this.channelId = null;
+    this.lockedChannelId = null; // when set (auto-join), the bot is pinned here
     this.ffmpeg = null;
     this.fetcher = null;
     this.destroyed = false;
+    this._watchdog = null;
+    this._rejoining = false;
 
     this.player = createAudioPlayer({
-      behaviors: { noSubscriber: NoSubscriberBehavior.Play },
+      // Pause when the voice connection drops (no subscriber) so we don't burn
+      // through the queue silently; resumes once we rejoin and re-subscribe.
+      behaviors: { noSubscriber: NoSubscriberBehavior.Pause },
     });
 
     this.player.on(AudioPlayerStatus.Idle, () => this._onTrackEnd());
@@ -63,29 +68,77 @@ class GuildPlayer {
 
     this.connection.subscribe(this.player);
 
-    // Auto-reconnect: if the websocket drops, try to recover; otherwise rejoin.
-    this.connection.on(VoiceConnectionStatus.Disconnected, async () => {
+    const conn = this.connection;
+    conn.on(VoiceConnectionStatus.Disconnected, async () => {
+      if (this.destroyed) return;
       try {
+        // Give discord.js a moment to auto-resume (e.g. voice region change).
         await Promise.race([
-          entersState(this.connection, VoiceConnectionStatus.Signalling, 5_000),
-          entersState(this.connection, VoiceConnectionStatus.Connecting, 5_000),
+          entersState(conn, VoiceConnectionStatus.Signalling, 5_000),
+          entersState(conn, VoiceConnectionStatus.Connecting, 5_000),
         ]);
-        // Reconnecting on its own.
       } catch {
-        if (this.destroyed) return;
-        console.warn(`[player:${this.guild.id}] disconnected, rejoining...`);
-        try {
-          this.connection.destroy();
-        } catch {}
-        const ch = this.guild.channels.cache.get(this.channelId);
-        if (ch) {
-          this.connect(ch);
-          if (this.current || this.queue.length) this._playIndex(this.index);
-        }
+        this._rejoin('disconnected');
       }
     });
 
+    this._startWatchdog();
     return this.connection;
+  }
+
+  /**
+   * Periodic safety net: if we are supposed to be connected but the voice
+   * connection is gone/destroyed (e.g. kicked, silent drop), rejoin.
+   */
+  _startWatchdog() {
+    if (this._watchdog) return;
+    const live = new Set([
+      VoiceConnectionStatus.Ready,
+      VoiceConnectionStatus.Connecting,
+      VoiceConnectionStatus.Signalling,
+    ]);
+    this._watchdog = setInterval(() => {
+      if (this.destroyed || this._rejoining) return;
+      const target = this.lockedChannelId || this.channelId;
+      if (!target) return;
+      // When locked (auto-join), also enforce being in the right channel: if the
+      // bot was dragged elsewhere or pulled out, the cached voice state differs.
+      if (this.lockedChannelId) {
+        const actual = this.guild.members?.me?.voice?.channelId ?? null;
+        if (actual !== this.lockedChannelId) { this._rejoin('watchdog-lock'); return; }
+      }
+      if (!live.has(this.connection?.state?.status)) this._rejoin('watchdog');
+    }, 15_000);
+    this._watchdog.unref?.();
+  }
+
+  // Pin the bot to a channel (auto-join). It will be dragged back if moved/kicked.
+  lockChannel(id) { this.lockedChannelId = id; this.channelId = id; }
+  unlock() { this.lockedChannelId = null; }
+  returnToLock() { if (this.lockedChannelId) this._rejoin('moved'); }
+
+  /** Full rejoin: fetch the channel fresh (cache may miss), reconnect, restart audio. */
+  async _rejoin(reason) {
+    const target = this.lockedChannelId || this.channelId;
+    if (this.destroyed || this._rejoining || !target) return;
+    this._rejoining = true;
+    try {
+      try { this.connection?.destroy(); } catch {}
+      const channel = await this.guild.channels.fetch(target).catch(() => null);
+      if (!channel) {
+        console.warn(`[player:${this.guild.id}] rejoin (${reason}) fehlgeschlagen: Channel ${target} weg`);
+        return;
+      }
+      console.warn(`[player:${this.guild.id}] Voice verloren/verschoben (${reason}) — rejoine #${channel.name}`);
+      this.connect(channel);
+      await entersState(this.connection, VoiceConnectionStatus.Ready, 20_000).catch(() => {});
+      // Restart the current track fresh so we get live audio, not a stale buffer.
+      if (this.current || this.queue.length) this._playIndex(this.index);
+    } catch (err) {
+      console.error(`[player:${this.guild.id}] rejoin error: ${err.message}`);
+    } finally {
+      this._rejoining = false;
+    }
   }
 
   async ensureConnected(channel) {
@@ -252,6 +305,7 @@ class GuildPlayer {
 
   destroy() {
     this.destroyed = true;
+    if (this._watchdog) { clearInterval(this._watchdog); this._watchdog = null; }
     this.stop();
     this._killProcs();
     if (this.connection) {
