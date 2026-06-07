@@ -1,6 +1,6 @@
-# Discord 24/7 Music Bot
+# Sonance
 
-Spielt durchgehend Musik in einem Voice-Channel. Quellen:
+24/7-Discord-Musikbot. Spielt durchgehend Musik in einem Voice-Channel. Quellen:
 
 - **Internet-Radio / direkte Stream-URL** (Icecast/Shoutcast MP3 usw.)
 - **YouTube** – Videos, Live-Streams, Playlists oder Suchbegriffe (via `yt-dlp`)
@@ -87,10 +87,10 @@ docker compose logs -f
 Ohne Compose:
 
 ```bash
-docker build -t musicbot .
-docker run -d --name musicbot --restart unless-stopped \
+docker build -t sonance .
+docker run -d --name sonance --restart unless-stopped \
   -e DISCORD_TOKEN=... -e DISCORD_CLIENT_ID=... -e DISCORD_GUILD_ID=... \
-  -v musicbot-data:/data musicbot
+  -v sonance-data:/data sonance
 ```
 
 `restart: unless-stopped` sorgt für echtes 24/7 (übersteht Crashes & Reboots).
@@ -115,7 +115,7 @@ cd /opt/sonance && docker compose pull && docker compose up -d
 ```
 
 Dazu liegt auf dem Server eine `docker-compose.yml` (Image-Default zeigt auf GHCR,
-sonst via `MUSICBOT_IMAGE` überschreiben) und eine `.env` mit den Secrets. Bei
+sonst via `SONANCE_IMAGE` überschreiben) und eine `.env` mit den Secrets. Bei
 **privatem** Package vorher einmalig `docker login ghcr.io` (mit einem PAT,
 Scope `read:packages`); bei public entfällt das.
 

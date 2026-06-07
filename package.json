@@ -1,7 +1,7 @@
 {
-  "name": "musicbot",
+  "name": "sonance",
   "version": "1.0.0",
-  "description": "Discord 24/7 music bot (radio, YouTube, local files)",
+  "description": "Sonance — 24/7 Discord music bot (radio & YouTube)",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js"

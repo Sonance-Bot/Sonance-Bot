@@ -1,9 +1,12 @@
+name: sonance
+
 services:
-  musicbot:
+  sonance:
+    container_name: sonance
     # The server's cron runs `docker compose pull && docker compose up -d`, so it
-    # needs the CI-built GHCR image here (override via the MUSICBOT_IMAGE env var
+    # needs the CI-built GHCR image here (override via the SONANCE_IMAGE env var
     # if your repo path differs). `build: .` stays for local builds.
-    image: ${MUSICBOT_IMAGE:-ghcr.io/sonance-bot/sonance-bot:latest}
+    image: ${SONANCE_IMAGE:-ghcr.io/sonance-bot/sonance-bot:latest}
     build: .
     restart: unless-stopped
     environment:
@@ -15,8 +18,8 @@ services:
       DEFAULT_VOLUME: ${DEFAULT_VOLUME:-100}
     volumes:
       # Persists /autojoin config across restarts.
-      - musicbot-data:/data
+      - sonance-data:/data
     # The bot has no inbound ports; it only connects out to Discord.
 
 volumes:
-  musicbot-data:
+  sonance-data:
