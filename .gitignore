@@ -10,3 +10,6 @@ bin/yt-dlp
 # Logs
 *.log
 bot.log
+
+# Local launcher (not part of the bot)
+start.sh
