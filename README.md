@@ -1,24 +1,21 @@
 # Sonance
 
-Monorepo für **Sonance** — einen 24/7-Discord-Musikbot samt zugehöriger Website.
+24/7-Discord-Musikbot — spielt durchgehend Musik in einem Voice-Channel
+(Radio-Streams & YouTube, Auto-Join, automatischer Reconnect).
 
-## Projekte
-
-| Ordner | Beschreibung |
-|---|---|
-| [`bot/`](bot/) | Der Discord-Bot (Node.js, discord.js). Radio-Streams & YouTube, Auto-Join, 24/7-Reconnect. → [bot/README.md](bot/README.md) |
-| [`website/`](website/) | Website mit Infos, Deployment-Anleitungen und Wiki. 🚧 In Aufbau. → [website/README.md](website/README.md) |
-
-## Entwicklung
-
-Jedes Projekt ist eigenständig und wird in seinem Unterordner gebaut/betrieben:
+Der Bot-Code liegt in **[`bot/`](bot/)** → Setup & Doku: [bot/README.md](bot/README.md).
 
 ```bash
-cd bot && npm install && npm start   # Bot lokal starten (Setup s. bot/README.md)
+cd bot && npm install && npm start
 ```
 
-CI/CD läuft pro Projekt über eigene GitHub-Actions-Workflows
-(`.github/workflows/bot.yml`), die nur bei Änderungen am jeweiligen Ordner triggern.
+CI/CD baut das Docker-Image bei Änderungen unter `bot/` und pusht es nach GHCR
+(`.github/workflows/bot.yml`).
+
+## Website
+
+Die Website (Infos, Deployment-Anleitungen, Wiki) ist ein eigenes Projekt:
+**[Sonance-Bot/sonance-website](https://github.com/Sonance-Bot/sonance-website)**.
 
 ## Lizenz
 

@@ -1,4 +1,8 @@
-# Dependencies, build output, logs (any sub-project)
+# The website lives in its own repo (Sonance-Bot/sonance-website), checked out
+# here as a sibling folder — not tracked by this repo.
+website/
+
+# Dependencies, build output, logs
 node_modules/
 dist/
 build/
