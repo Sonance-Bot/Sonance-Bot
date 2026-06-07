@@ -1,15 +1,15 @@
-# Secrets & runtime state — NEVER commit these
-config.json
-data/
-.env
-
-# Dependencies & binaries (installed/downloaded during build)
+# Dependencies, build output, logs (any sub-project)
 node_modules/
-bin/yt-dlp
-
-# Logs
+dist/
+build/
 *.log
-bot.log
+.env
+.env.local
 
-# Local launcher (not part of the bot)
+# Bot — secrets & downloaded binary (never commit)
+bot/config.json
+bot/data/
+bot/bin/yt-dlp
+
+# Local launcher (not part of the project)
 start.sh
