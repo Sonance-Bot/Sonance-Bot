@@ -322,6 +322,15 @@ client.on('interactionCreate', async (interaction) => {
 process.on('SIGINT', () => { for (const p of players.values()) p.destroy(); process.exit(0); });
 process.on('SIGTERM', () => { for (const p of players.values()) p.destroy(); process.exit(0); });
 
+// Last-resort safety net for a 24/7 bot: log instead of crashing on an
+// unexpected error (transient network/voice issues shouldn't kill the process).
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason instanceof Error ? reason.stack : reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err?.stack || err);
+});
+
 (async () => {
   try {
     await registerCommands();
