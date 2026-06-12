@@ -42,6 +42,14 @@ class GuildPlayer {
     this.destroyed = false;
     this._watchdog = null;
     this._rejoining = false;
+    // Failure backoff: a continuously-failing track must not retry every ~1.5s
+    // forever — that hammers the source (e.g. YouTube rate-limiting) and floods
+    // the log. Consecutive quick failures back off exponentially.
+    this._failCount = 0;
+    this._retryTimer = null;
+    this._advancing = false;
+    this._userSkip = false;
+    this._startedAt = 0;
 
     this.player = createAudioPlayer({
       // Pause when the voice connection drops (no subscriber) so we don't burn
@@ -49,11 +57,10 @@ class GuildPlayer {
       behaviors: { noSubscriber: NoSubscriberBehavior.Pause },
     });
 
-    this.player.on(AudioPlayerStatus.Idle, () => this._onTrackEnd());
+    this.player.on(AudioPlayerStatus.Idle, () => this._advance());
     this.player.on('error', (err) => {
       console.error(`[player:${this.guild.id}] resource error:`, err.message);
-      // Skip the broken track after a short delay instead of dying.
-      setTimeout(() => this._onTrackEnd(), 1500);
+      this._advance();
     });
   }
 
@@ -140,6 +147,7 @@ class GuildPlayer {
       this.connect(channel);
       await entersState(this.connection, VoiceConnectionStatus.Ready, 20_000).catch(() => {});
       // Restart the current track fresh so we get live audio, not a stale buffer.
+      if (this._retryTimer) { clearTimeout(this._retryTimer); this._retryTimer = null; this._advancing = false; }
       if (this.current || this.queue.length) this._playIndex(this.index);
     } catch (err) {
       console.error(`[player:${this.guild.id}] rejoin error: ${err.message}`);
@@ -185,14 +193,42 @@ class GuildPlayer {
     return next;
   }
 
-  _onTrackEnd() {
-    if (this.destroyed) return;
+  /**
+   * Advance to the next track. Debounced (a failed resource emits both 'error'
+   * and Idle). If the current track ended almost immediately it's treated as a
+   * failure and the next attempt is delayed with exponential backoff.
+   */
+  _advance() {
+    if (this.destroyed || this._advancing) return;
+    this._advancing = true;
+
     const next = this._nextIndex();
     if (next === -1) {
       this.current = null;
+      this._advancing = false;
       return;
     }
-    this._playIndex(next);
+
+    let delay = 0;
+    if (this._userSkip) {
+      this._userSkip = false;
+      this._failCount = 0;
+    } else if (Date.now() - this._startedAt < 5_000) {
+      // Ended within 5s of starting -> failure. Back off: 1.5s, 3s, 6s … cap 90s.
+      this._failCount++;
+      delay = Math.min(1500 * 2 ** Math.min(this._failCount - 1, 6), 90_000);
+      if (this._failCount === 1 || this._failCount % 20 === 0) {
+        console.warn(`[player:${this.guild.id}] ${this._failCount} Fehlstarts in Folge — Backoff ${Math.round(delay / 1000)}s ("${this.queue[this.index]?.title}")`);
+      }
+    } else {
+      this._failCount = 0;
+    }
+
+    this._retryTimer = setTimeout(() => {
+      this._retryTimer = null;
+      this._advancing = false;
+      this._playIndex(next);
+    }, delay);
   }
 
   async start() {
@@ -205,6 +241,7 @@ class GuildPlayer {
     const track = this.queue[i];
     if (!track) return;
     this.index = i;
+    this._startedAt = Date.now();
 
     try {
       const resource = this._makeResource(track);
@@ -213,8 +250,7 @@ class GuildPlayer {
       console.log(`[player:${this.guild.id}] ▶ ${track.title}`);
     } catch (err) {
       console.error(`[player:${this.guild.id}] failed to play "${track.title}":`, err.message);
-      // Move on so one bad track never stalls a 24/7 stream.
-      setTimeout(() => this._onTrackEnd(), 1500);
+      this._advance();
     }
   }
 
@@ -295,14 +331,26 @@ class GuildPlayer {
   }
 
   skip() {
-    // Triggers Idle -> _onTrackEnd.
-    this.player.stop(true);
+    // User-initiated -> not a failure; jump immediately, even mid-backoff.
+    this._userSkip = true;
+    this._failCount = 0;
+    if (this._retryTimer) {
+      clearTimeout(this._retryTimer);
+      this._retryTimer = null;
+      this._advancing = false;
+      this._advance();
+    } else {
+      this.player.stop(true); // -> Idle -> _advance()
+    }
   }
 
   pause() { return this.player.pause(); }
   resume() { return this.player.unpause(); }
 
   stop() {
+    if (this._retryTimer) { clearTimeout(this._retryTimer); this._retryTimer = null; }
+    this._advancing = false;
+    this._failCount = 0;
     this.queue = [];
     this.current = null;
     this.index = 0;
