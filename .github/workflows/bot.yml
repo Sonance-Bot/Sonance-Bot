@@ -7,6 +7,11 @@ on:
   pull_request:
     branches: [main]
     paths: ['bot/**', '.github/workflows/bot.yml']
+  # Weekly rebuild so the image keeps a fresh yt-dlp (YouTube extraction breaks
+  # over time). Mondays 04:00 UTC. Also runnable manually.
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
 
 jobs:
   # Lint: syntax + module load (catches breakage before building an image).
@@ -30,7 +35,10 @@ jobs:
   build:
     needs: lint
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     permissions:
       contents: read
       packages: write
@@ -61,6 +69,9 @@ jobs:
         with:
           context: bot
           push: true
+          # Scheduled/manual rebuilds skip the cache so the yt-dlp download layer
+          # is actually re-fetched (otherwise it stays cached and stale).
+          no-cache: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
