@@ -58,7 +58,10 @@ async function resolveQuery(query) {
     .map((e) => ({
       title: e.title || e.id,
       type: 'ytdlp',
-      input: e.url && isUrl(e.url) ? e.url : `https://www.youtube.com/watch?v=${e.id}`,
+      // Always prefer the watch URL (from the video id) so yt-dlp re-resolves a
+      // fresh stream URL on every play. For a single video, e.url is the direct
+      // googlevideo CDN URL, which expires after hours -> 403 on the next loop.
+      input: e.id ? `https://www.youtube.com/watch?v=${e.id}` : e.url,
     }));
 }
 
