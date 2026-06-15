@@ -78,9 +78,12 @@ class GuildPlayer {
     const conn = this.connection;
     // Without this, a voice networking error (e.g. Cloudflare 522 on the voice
     // websocket) is emitted as an unhandled 'error' event and crashes the process.
-    // Log it and let the Disconnected handler / watchdog recover.
+    // It can also leave the connection "Ready" but degraded so playback stalls
+    // (backpressure freezes the stream) without the watchdog noticing — so force a
+    // full rejoin + fresh track restart to recover.
     conn.on('error', (err) => {
       console.error(`[voice:${this.guild.id}] connection error: ${err.message}`);
+      this._rejoin('connection-error');
     });
 
     conn.on(VoiceConnectionStatus.Disconnected, async () => {
