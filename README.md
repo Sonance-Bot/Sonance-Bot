@@ -1,5 +1,10 @@
 # Sonance
 
+[![Website](https://img.shields.io/badge/Website-sonance--bot.de-5865F2)](https://sonance-bot.de)
+[![Docker image](https://img.shields.io/badge/ghcr.io-sonance--bot%2Fsonance--bot-2496ED?logo=docker&logoColor=white)](https://github.com/Sonance-Bot/Sonance-Bot/pkgs/container/sonance-bot)
+[![Bot CI](https://github.com/Sonance-Bot/Sonance-Bot/actions/workflows/bot.yml/badge.svg)](https://github.com/Sonance-Bot/Sonance-Bot/actions/workflows/bot.yml)
+[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-lightgrey)](LICENSE)
+
 **24/7-Discord-Musikbot** — spielt durchgehend Musik in einem Voice-Channel:
 Internet-Radio-Streams und YouTube (Videos, Playlists, Suche), mit Auto-Join beim
 Start und automatischem Reconnect. Steuerung per Slash-Commands.
@@ -9,6 +14,8 @@ Start und automatischem Reconnect. Steuerung per Slash-Commands.
   werden übersprungen statt den Stream zu killen
 - 🐳 **Ein Container:** fertiges Image auf GHCR — keine Build-Tools nötig
 - 🔒 **Zugriffskontrolle** per Discord-Rollen
+
+> 🌐 **Website, Doku & Wiki: [sonance-bot.de](https://sonance-bot.de)** — Open Source, in Minuten selbst gehostet.
 
 ---
 
@@ -132,7 +139,12 @@ cd bot && docker compose pull && docker compose up -d
 
 - **Volle Doku** (alle Env-Variablen, CI/CD, technische Hinweise): [`bot/README.md`](bot/README.md)
 - **Code:** [`bot/`](bot/) — Node.js 22, discord.js v14
-- **Website / Wiki:** [Sonance-Bot/sonance-website](https://github.com/Sonance-Bot/sonance-website)
+- **Website, Doku & Wiki:** **[sonance-bot.de](https://sonance-bot.de)** · [Website-Quellcode](https://github.com/Sonance-Bot/sonance-website)
+
+---
+
+Sonance ist **Open Source** und in Minuten selbst gehostet. Gefällt dir der Bot?
+→ Gib dem [Repo](https://github.com/Sonance-Bot/Sonance-Bot) ein ⭐ und schau auf **[sonance-bot.de](https://sonance-bot.de)** vorbei.
 
 ## Lizenz
 
