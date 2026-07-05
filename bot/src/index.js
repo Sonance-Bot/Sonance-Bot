@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {
+  ActivityType,
   Client,
   GatewayIntentBits,
   PermissionFlagsBits,
@@ -128,6 +129,8 @@ async function doAutoJoin() {
 
 client.once('clientReady', async () => {
   console.log(`Eingeloggt als ${client.user.tag}`);
+  // Dezenter Website-Hinweis als Status unter dem Bot-Namen.
+  client.user.setActivity('sonance-bot.de', { type: ActivityType.Listening });
   await doAutoJoin();
 });
 
