@@ -80,7 +80,7 @@ Volume unter `/data`.
 
 ```bash
 cp .env.example .env        # Token usw. eintragen (.env ist gitignored)
-docker compose up -d --build
+docker compose up -d        # zieht das public GHCR-Image (kein Build nötig; --build nur bei eigenen Code-Änderungen)
 docker compose logs -f
 ```
 
@@ -105,8 +105,9 @@ bei Änderungen unter `bot/`:
    Container Registry** `ghcr.io/<owner>/<repo>` (`:latest` + `:sha-<kurz>`)
 
 Keine Secrets nötig — der Build nutzt den eingebauten `GITHUB_TOKEN` (Job-
-Permission `packages: write`). Das GHCR-Package ist anfangs privat; in den
-Package-Settings auf **public** stellen, wenn jeder es ziehen können soll.
+Permission `packages: write`). Das GHCR-Package ist anfangs privat — für dieses Repo bereits auf **public**
+gestellt (`ghcr.io/sonance-bot/sonance-bot:latest` ist anonym pullbar). Bei eigenen
+Forks in den Package-Settings auf public stellen, wenn jeder es ziehen können soll.
 
 **Deployment** passiert auf dem Zielserver selbst: dort läuft ein Cron, der das
 frisch gepushte Image ausrollt:
